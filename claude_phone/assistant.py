@@ -1,27 +1,31 @@
-"""LLM replies via either Anthropic Claude or Google Gemini.
+"""LLM replies via Anthropic Claude, Google Gemini, or OpenAI.
 
-Select with the LLM_PROVIDER env var ("claude" or "gemini"). Conversation
-history is kept in a provider-neutral form (role "user"/"assistant" + text)
-and translated to each SDK's native message format at call time.
+LLM_PROVIDERS is a comma-separated fallback chain (e.g. "gemini,claude,openai");
+providers are tried in order per reply, falling through to the next one on any
+exception. Conversation history is kept in a provider-neutral form (role
+"user"/"assistant" + text) and translated to each SDK's native message format
+at call time.
 """
 
 from anthropic import Anthropic, RateLimitError as AnthropicRateLimitError
 from google import genai
 from google.genai import errors as genai_errors
 from google.genai import types
+from openai import InternalServerError as OpenAIInternalServerError, OpenAI, RateLimitError as OpenAIRateLimitError
 
 from . import config, safety
-from .errors import ModelOverloadedError, QuotaExceededError
+from .errors import AllProvidersFailedError, ModelOverloadedError, QuotaExceededError
 
 _anthropic_client = None
 _gemini_client = None
+_openai_client = OpenAI(api_key=config.OPENAI_API_KEY)
 
 
 def _get_anthropic_client() -> Anthropic:
     global _anthropic_client
     if _anthropic_client is None:
         if not config.ANTHROPIC_API_KEY:
-            raise RuntimeError("ANTHROPIC_API_KEY is not set (required when LLM_PROVIDER=claude)")
+            raise RuntimeError("ANTHROPIC_API_KEY is not set (required when 'claude' is in LLM_PROVIDERS)")
         _anthropic_client = Anthropic(api_key=config.ANTHROPIC_API_KEY)
     return _anthropic_client
 
@@ -30,7 +34,7 @@ def _get_gemini_client() -> genai.Client:
     global _gemini_client
     if _gemini_client is None:
         if not config.GEMINI_API_KEY:
-            raise RuntimeError("GEMINI_API_KEY is not set (required when LLM_PROVIDER=gemini)")
+            raise RuntimeError("GEMINI_API_KEY is not set (required when 'gemini' is in LLM_PROVIDERS)")
         _gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
     return _gemini_client
 
@@ -73,9 +77,23 @@ def _ask_gemini(messages: list[dict]) -> str:
     return response.text.strip()
 
 
+def _ask_openai(messages: list[dict]) -> str:
+    try:
+        response = _openai_client.chat.completions.create(
+            model=config.OPENAI_CHAT_MODEL,
+            messages=[{"role": "system", "content": config.SYSTEM_PROMPT}] + messages,
+        )
+    except OpenAIRateLimitError as e:
+        raise QuotaExceededError("OpenAI", e.message) from e
+    except OpenAIInternalServerError as e:
+        raise ModelOverloadedError("OpenAI", e.message) from e
+    return response.choices[0].message.content.strip()
+
+
 _PROVIDERS = {
     "claude": _ask_claude,
     "gemini": _ask_gemini,
+    "openai": _ask_openai,
 }
 
 
@@ -84,16 +102,29 @@ class Conversation:
 
     def __init__(self):
         self._messages = []
+        self.last_provider = None
         try:
-            self._ask = _PROVIDERS[config.LLM_PROVIDER]
-        except KeyError:
+            self._chain = [(name, _PROVIDERS[name]) for name in config.LLM_PROVIDER_CHAIN]
+        except KeyError as e:
             raise ValueError(
-                f"Unknown LLM_PROVIDER: {config.LLM_PROVIDER!r} (expected 'claude' or 'gemini')"
+                f"Unknown provider {e.args[0]!r} in LLM_PROVIDERS (expected some of {sorted(_PROVIDERS)})"
             ) from None
+        if not self._chain:
+            raise ValueError("LLM_PROVIDERS must name at least one provider")
 
     def ask(self, text: str) -> str:
         self._messages.append({"role": "user", "content": text})
-        reply = self._ask(self._messages)
+        reply, attempts = None, []
+        for name, ask_fn in self._chain:
+            try:
+                reply = ask_fn(self._messages)
+                self.last_provider = name
+                break
+            except Exception as e:
+                print(f"[fallback] {name} failed ({e}); trying next provider")
+                attempts.append((name, e))
+        if reply is None:
+            raise AllProvidersFailedError(attempts)
         if config.CHILD_SAFETY_ENABLED and not safety.is_child_safe(reply):
             reply = config.CHILD_SAFETY_FALLBACK_REPLY
         self._messages.append({"role": "assistant", "content": reply})

@@ -1,5 +1,5 @@
 """Hard technical backstop: verifies every LLM reply is safe to speak to a child
-before it reaches TTS, via OpenAI's moderation API. Runs regardless of LLM_PROVIDER.
+before it reaches TTS, via OpenAI's moderation API. Runs regardless of LLM_PROVIDERS.
 """
 
 from openai import OpenAI

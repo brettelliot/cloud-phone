@@ -24,17 +24,22 @@ COMFORT_NOISE_VOLUME = float(os.environ.get("COMFORT_NOISE_VOLUME", "0.11"))  # 
 
 # Hard technical backstop: every LLM reply is checked against OpenAI's moderation
 # API before being spoken; if flagged (or if the check itself errors), the reply
-# is replaced with CHILD_SAFETY_FALLBACK_REPLY. Independent of LLM_PROVIDER.
+# is replaced with CHILD_SAFETY_FALLBACK_REPLY. Independent of LLM_PROVIDERS.
 CHILD_SAFETY_ENABLED = os.environ.get("CHILD_SAFETY_ENABLED", "true").lower() != "false"
 CHILD_SAFETY_FALLBACK_REPLY = os.environ.get(
     "CHILD_SAFETY_FALLBACK_REPLY",
     "Let's talk about something else -- what else are you curious about?",
 )
 
-# "claude" (Anthropic) or "gemini" (Google)
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "claude")
+# Comma-separated fallback chain, tried in order for each reply; if a provider
+# raises any exception (overloaded, out of quota, network error, missing key,
+# etc.) the next one is tried within the same turn. Any combination/order of
+# "claude" (Anthropic), "gemini" (Google), "openai" (OpenAI).
+LLM_PROVIDERS = os.environ.get("LLM_PROVIDERS", "gemini,claude,openai")
+LLM_PROVIDER_CHAIN = [p.strip() for p in LLM_PROVIDERS.split(",") if p.strip()]
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")  # only used when LLM_PROVIDER=gemini
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")  # only used when "gemini" is in LLM_PROVIDERS
+OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")  # only used when "openai" is in LLM_PROVIDERS, for replies (separate from TTS_MODEL/STT_MODEL)
 TTS_MODEL = os.environ.get("TTS_MODEL", "tts-1")
 TTS_VOICE = os.environ.get("TTS_VOICE", "alloy")
 
@@ -51,6 +56,7 @@ MAX_RECORDING_SECONDS = float(os.environ.get("MAX_RECORDING_SECONDS", "30"))
 GREETINGS = {
     "claude": "Hi, this is Claude. What's your question?",
     "gemini": "Hi, this is Gemini. What's your question?",
+    "openai": "Hi, this is ChatGPT. What's your question?",
 }
 
 SYSTEM_PROMPT = (

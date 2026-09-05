@@ -1,8 +1,9 @@
 # claude-phone
 
 Turn an old landline handset into a voice interface for an LLM. Pick up the
-handset, talk, and Claude (or Gemini) talks back — powered by a Raspberry Pi,
-the Anthropic or Google API, and speech-to-text/text-to-speech.
+handset, talk, and Claude, Gemini, or ChatGPT talks back — powered by a
+Raspberry Pi, the Anthropic, Google, and OpenAI APIs (with automatic fallback
+between them), and speech-to-text/text-to-speech.
 
 ## How it works
 
@@ -10,13 +11,16 @@ the Anthropic or Google API, and speech-to-text/text-to-speech.
 
 1. Wait for the phone to be picked up (hook switch, or Enter key for testing).
 2. Play a greeting through the earpiece. This is a pre-recorded clip (one per
-   `LLM_PROVIDER`, in `assets/greetings/`) rather than a live TTS call, so
-   there's no synthesis latency before the caller hears anything.
+   provider, in `assets/greetings/`) rather than a live TTS call, so there's
+   no synthesis latency before the caller hears anything. The greeting used
+   is for the first provider in `LLM_PROVIDERS`.
 3. Record until the caller stops talking (silence detection), transcribe it
-   (`stt.py`, via Wispr Flow or OpenAI Whisper), send it to Claude or Gemini
-   (`assistant.py`, keeping the conversation history for the call), and speak
-   the reply back (`tts.py`, via OpenAI TTS). While all that's happening, the
-   caller hears quiet comfort noise (`comfort_noise.py`) instead of dead air.
+   (`stt.py`, via Wispr Flow or OpenAI Whisper), send it to the `LLM_PROVIDERS`
+   fallback chain (`assistant.py`, keeping the conversation history for the
+   call; if a provider fails for any reason, the next one in the chain is
+   tried automatically), and speak the reply back (`tts.py`, via OpenAI TTS).
+   While all that's happening, the caller hears quiet comfort noise
+   (`comfort_noise.py`) instead of dead air.
 4. Repeat until the handset goes back on the hook, then reset the
    conversation for the next call.
 
@@ -132,12 +136,13 @@ defaults; the notable ones:
 
 | Variable | Purpose |
 |---|---|
-| `OPENAI_API_KEY` | Required. Used for TTS, and STT if `STT_PROVIDER=openai`. |
-| `LLM_PROVIDER` | `claude` (default) or `gemini`. Which LLM answers the call. |
-| `ANTHROPIC_API_KEY` | Required if `LLM_PROVIDER=claude`. |
+| `OPENAI_API_KEY` | Required. Used for TTS, STT if `STT_PROVIDER=openai`, moderation, and replies if `openai` is in `LLM_PROVIDERS`. |
+| `LLM_PROVIDERS` | Comma-separated fallback chain of `claude`, `gemini`, `openai`, tried in order per reply. Defaults to `gemini,claude,openai`; falls through to the next provider on any failure (overloaded, out of quota, network error, missing key, etc.) within the same turn. |
+| `ANTHROPIC_API_KEY` | Required if `claude` is in `LLM_PROVIDERS`. |
 | `CLAUDE_MODEL` | Defaults to `claude-sonnet-5`. |
-| `GEMINI_API_KEY` | Required if `LLM_PROVIDER=gemini`. Get one at https://aistudio.google.com/apikey. |
+| `GEMINI_API_KEY` | Required if `gemini` is in `LLM_PROVIDERS`. Get one at https://aistudio.google.com/apikey. |
 | `GEMINI_MODEL` | Defaults to `gemini-flash-latest`. |
+| `OPENAI_CHAT_MODEL` | Used for replies if `openai` is in `LLM_PROVIDERS`. Defaults to `gpt-4o-mini`. |
 | `STT_PROVIDER` | `wispr` (default) or `openai`. |
 | `WISPR_FLOW_API_KEY` | Required if `STT_PROVIDER=wispr`. Get one at https://platform.wisprflow.ai/. |
 | `PHONE_TRIGGER` | `keyboard` (default, for development) or `gpio` (real hook switch). |
@@ -154,17 +159,18 @@ defaults; the notable ones:
 
 ## Updating the greeting
 
-The greeting played at pickup (`config.GREETINGS`, one line per
-`LLM_PROVIDER`) is pre-recorded to `assets/greetings/<provider>.pcm` rather
-than synthesized live. If you change the greeting text, `TTS_VOICE`, or
-`TTS_MODEL`, regenerate the affected asset(s) and commit the result:
+The greeting played at pickup (`config.GREETINGS`, one line per provider) is
+pre-recorded to `assets/greetings/<provider>.pcm` rather than synthesized
+live. If you change the greeting text, `TTS_VOICE`, or `TTS_MODEL`,
+regenerate the affected asset(s) and commit the result:
 
 ```bash
 python scripts/generate_greeting.py            # regenerate every provider
 python scripts/generate_greeting.py gemini     # or just one
 ```
 
-The app fails fast at startup if the active provider's asset is missing.
+The app fails fast at startup if the first provider in `LLM_PROVIDERS`
+doesn't have a greeting asset.
 
 ## Running
 

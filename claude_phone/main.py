@@ -5,7 +5,7 @@ from pathlib import Path
 
 from . import audio_io, config, safety, stt, tts
 from .assistant import Conversation
-from .errors import ModelOverloadedError, QuotaExceededError
+from .errors import AllProvidersFailedError, QuotaExceededError
 from .trigger import get_trigger
 
 # When stdout isn't a terminal (e.g. piped to journald under systemd), Python
@@ -47,13 +47,13 @@ def _apologize_and_end_call(e: QuotaExceededError, trigger) -> None:
         print("[quota] couldn't speak the apology either -- TTS quota is also exhausted")
 
 
-def _apologize_and_continue(e: ModelOverloadedError, trigger) -> None:
-    print(f"[overloaded] {e}")
-    message = f"Sorry, the {e.provider} model is temporarily overloaded. Please try asking again in a moment."
+def _apologize_and_end_call_all_failed(e: AllProvidersFailedError, trigger) -> None:
+    print(f"[fallback] {e}")
+    message = "Sorry, none of my language models are available right now. Please try again later. Goodbye."
     try:
         audio_io.play_with_comfort_noise(lambda: tts.synthesize_stream(message), tts.PCM_SAMPLE_RATE, trigger)
     except QuotaExceededError:
-        print("[overloaded] couldn't speak the apology either -- TTS quota is also exhausted")
+        print("[fallback] couldn't speak the apology either -- TTS quota is also exhausted")
 
 
 def handle_call(trigger, greeting_audio: bytes) -> None:
@@ -89,9 +89,9 @@ def handle_call(trigger, greeting_audio: bytes) -> None:
         except QuotaExceededError as e:
             _apologize_and_end_call(e, trigger)
             break
-        except ModelOverloadedError as e:
-            _apologize_and_continue(e, trigger)
-            continue
+        except AllProvidersFailedError as e:
+            _apologize_and_end_call_all_failed(e, trigger)
+            break
 
         heard = result["heard"]
         if not heard:
@@ -101,14 +101,14 @@ def handle_call(trigger, greeting_audio: bytes) -> None:
         reply = result["reply"]
         if reply is None:
             break
-        print(f"{config.LLM_PROVIDER}: {reply}")
+        print(f"{conversation.last_provider}: {reply}")
 
     print("Call ended.\n")
 
 
 def main() -> None:
     trigger = get_trigger(config.PHONE_TRIGGER, config.HOOK_GPIO_PIN)
-    greeting_audio = _load_greeting_audio(config.LLM_PROVIDER)
+    greeting_audio = _load_greeting_audio(config.LLM_PROVIDER_CHAIN[0])
     with timed("warmup"):
         tts.warm_up()
         if config.STT_PROVIDER == "openai":
