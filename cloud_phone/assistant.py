@@ -35,7 +35,12 @@ def _get_gemini_client() -> genai.Client:
     if _gemini_client is None:
         if not config.GEMINI_API_KEY:
             raise RuntimeError("GEMINI_API_KEY is not set (required when 'gemini' is in LLM_PROVIDERS)")
-        _gemini_client = genai.Client(api_key=config.GEMINI_API_KEY)
+        # Pin v1beta: google-genai >= 3 defaults to v1, where aliases like
+        # "gemini-flash-latest" don't exist and generate_content 404s.
+        _gemini_client = genai.Client(
+            api_key=config.GEMINI_API_KEY,
+            http_options=types.HttpOptions(api_version="v1beta"),
+        )
     return _gemini_client
 
 
