@@ -1,4 +1,4 @@
-# claude-phone
+# cloud-phone
 
 Turn an old landline handset into a voice interface for an LLM. Pick up the
 handset, talk, and Claude, Gemini, or ChatGPT talks back — powered by a
@@ -7,7 +7,7 @@ between them), and speech-to-text/text-to-speech.
 
 ## How it works
 
-`claude_phone/main.py` runs a simple loop:
+`cloud_phone/main.py` runs a simple loop:
 
 1. Wait for the phone to be picked up (hook switch, or Enter key for testing).
 2. Play a greeting through the earpiece. This is a pre-recorded clip (one per
@@ -87,7 +87,7 @@ on the Pi's header — the code uses gpiozero's internal pull-up
 the switch is in when on-hook vs. off-hook, so test it: run with
 `PHONE_TRIGGER=gpio`, watch the logs while lifting/hanging up the handset,
 and if pickup/hangup are backwards, swap the assumption in
-`GPIOTrigger.is_hung_up()` (`claude_phone/trigger.py`).
+`GPIOTrigger.is_hung_up()` (`cloud_phone/trigger.py`).
 
 ## Setting up the Pi
 
@@ -109,12 +109,12 @@ and if pickup/hangup are backwards, swap the assumption in
 3. Clone the repo and set up a virtualenv:
 
    ```bash
-   git clone <this-repo-url> claude-phone
-   cd claude-phone
+   git clone <this-repo-url> cloud-phone
+   cd cloud-phone
    python3 -m venv venv
    source venv/bin/activate
    pip install -r requirements.txt
-   python3 -m venv --system-site-packages /home/brett/claude-phone/venv
+   python3 -m venv --system-site-packages /home/brett/cloud-phone/venv
    ```
 4. Copy the env file and fill in your keys:
 
@@ -131,7 +131,7 @@ and if pickup/hangup are backwards, swap the assumption in
 ## Configuration
 
 All configuration is via environment variables, loaded from `.env`
-(`claude_phone/config.py`). See `.env.example` for the full list with
+(`cloud_phone/config.py`). See `.env.example` for the full list with
 defaults; the notable ones:
 
 | Variable | Purpose |
@@ -176,7 +176,7 @@ doesn't have a greeting asset.
 
 ```bash
 source venv/bin/activate
-python -m claude_phone.main
+python -m cloud_phone.main
 ```
 
 With `PHONE_TRIGGER=keyboard`, press Enter to "pick up," talk, press Enter
@@ -189,16 +189,16 @@ To have the phone come alive automatically when the Pi powers on, add a
 systemd service:
 
 ```ini
-# /etc/systemd/system/claude-phone.service
+# /etc/systemd/system/cloud-phone.service
 [Unit]
-Description=claude-phone
+Description=cloud-phone
 After=network-online.target sound.target
 Wants=network-online.target
 
 [Service]
-WorkingDirectory=/home/brett/claude-phone
+WorkingDirectory=/home/brett/cloud-phone
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/home/brett/claude-phone/venv/bin/python -m claude_phone.main
+ExecStart=/home/brett/cloud-phone/venv/bin/python -m cloud_phone.main
 Restart=on-failure
 User=brett
 
@@ -207,22 +207,22 @@ WantedBy=multi-user.target
 ```
 
 ```bash
-sudo cp claude-phone.service.example /etc/systemd/system/claude-phone.service
+sudo cp cloud-phone.service.example /etc/systemd/system/cloud-phone.service
 ```
 
 or:
 ```bash
-sudo nano /etc/systemd/system/claude-phone.service
+sudo nano /etc/systemd/system/cloud-phone.service
 ```
 
 Then:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now claude-phone
-sudo systemctl start claude-phone.service
-sudo systemctl status claude-phone.service
-journalctl -u claude-phone -f   # to watch logs
+sudo systemctl enable --now cloud-phone
+sudo systemctl start cloud-phone.service
+sudo systemctl status cloud-phone.service
+journalctl -u cloud-phone -f   # to watch logs
 ```
 
 ## Pushing changes
@@ -230,10 +230,10 @@ When this repo changes ssh into device then:
 ```bash
    ping brett-pi.local
    ssh brett@brett-pi.local
-   cd claude-phone
+   cd cloud-phone
    git pull
-   sudo systemctl daemon-reload && sudo systemctl restart claude-phone
-   journalctl -u claude-phone -f   # if you want to watch logs
+   sudo systemctl daemon-reload && sudo systemctl restart cloud-phone
+   journalctl -u cloud-phone -f   # if you want to watch logs
 ```
 
 ## Changing the Wi-Fi network

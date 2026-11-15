@@ -1,12 +1,12 @@
 [Unit]
-Description=claude-phone
+Description=cloud-phone
 After=network-online.target sound.target
 Wants=network-online.target
 
 [Service]
-WorkingDirectory=/home/brett/claude-phone
+WorkingDirectory=/home/brett/cloud-phone
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/home/brett/claude-phone/venv/bin/python -m claude_phone.main
+ExecStart=/home/brett/cloud-phone/venv/bin/python -m cloud_phone.main
 Restart=on-failure
 User=brett
 

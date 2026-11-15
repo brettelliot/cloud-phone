@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from claude_phone import config, tts
+from cloud_phone import config, tts
 
 ASSETS_DIR = Path(__file__).resolve().parent.parent / "assets" / "greetings"
 
