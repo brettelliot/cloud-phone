@@ -35,7 +35,7 @@ CHILD_SAFETY_FALLBACK_REPLY = os.environ.get(
 # raises any exception (overloaded, out of quota, network error, missing key,
 # etc.) the next one is tried within the same turn. Any combination/order of
 # "claude" (Anthropic), "gemini" (Google), "openai" (OpenAI).
-LLM_PROVIDERS = os.environ.get("LLM_PROVIDERS", "gemini,claude,openai")
+LLM_PROVIDERS = os.environ.get("LLM_PROVIDERS", "gemini,openai,claude")
 LLM_PROVIDER_CHAIN = [p.strip() for p in LLM_PROVIDERS.split(",") if p.strip()]
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")  # only used when "gemini" is in LLM_PROVIDERS

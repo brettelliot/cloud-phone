@@ -1,6 +1,6 @@
 """LLM replies via Anthropic Claude, Google Gemini, or OpenAI.
 
-LLM_PROVIDERS is a comma-separated fallback chain (e.g. "gemini,claude,openai");
+LLM_PROVIDERS is a comma-separated fallback chain (e.g. "gemini,openai,claude");
 providers are tried in order per reply, falling through to the next one on any
 exception. Conversation history is kept in a provider-neutral form (role
 "user"/"assistant" + text) and translated to each SDK's native message format

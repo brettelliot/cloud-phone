@@ -137,7 +137,7 @@ defaults; the notable ones:
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | Required. Used for TTS, STT if `STT_PROVIDER=openai`, moderation, and replies if `openai` is in `LLM_PROVIDERS`. |
-| `LLM_PROVIDERS` | Comma-separated fallback chain of `claude`, `gemini`, `openai`, tried in order per reply. Defaults to `gemini,claude,openai`; falls through to the next provider on any failure (overloaded, out of quota, network error, missing key, etc.) within the same turn. |
+| `LLM_PROVIDERS` | Comma-separated fallback chain of `claude`, `gemini`, `openai`, tried in order per reply. Defaults to `gemini,openai,claude`; falls through to the next provider on any failure (overloaded, out of quota, network error, missing key, etc.) within the same turn. |
 | `ANTHROPIC_API_KEY` | Required if `claude` is in `LLM_PROVIDERS`. |
 | `CLAUDE_MODEL` | Defaults to `claude-sonnet-5`. |
 | `GEMINI_API_KEY` | Required if `gemini` is in `LLM_PROVIDERS`. Get one at https://aistudio.google.com/apikey. |
