@@ -37,9 +37,17 @@ def _get_gemini_client() -> genai.Client:
             raise RuntimeError("GEMINI_API_KEY is not set (required when 'gemini' is in LLM_PROVIDERS)")
         # Pin v1beta: google-genai >= 3 defaults to v1, where aliases like
         # "gemini-flash-latest" don't exist and generate_content 404s.
+        # Also fail fast: the SDK defaults to 5 attempts with exponential backoff
+        # and no timeout, which can hang a call for minutes when Gemini is
+        # overloaded. One attempt with a short timeout lets the fallback chain
+        # move on to the next provider instead.
         _gemini_client = genai.Client(
             api_key=config.GEMINI_API_KEY,
-            http_options=types.HttpOptions(api_version="v1beta"),
+            http_options=types.HttpOptions(
+                api_version="v1beta",
+                timeout=config.GEMINI_TIMEOUT_MS,
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
         )
     return _gemini_client
 

@@ -39,6 +39,7 @@ LLM_PROVIDERS = os.environ.get("LLM_PROVIDERS", "gemini,openai,claude")
 LLM_PROVIDER_CHAIN = [p.strip() for p in LLM_PROVIDERS.split(",") if p.strip()]
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest")  # only used when "gemini" is in LLM_PROVIDERS
+GEMINI_TIMEOUT_MS = int(os.environ.get("GEMINI_TIMEOUT_MS", "15000"))  # per-request; no SDK retries, the fallback chain handles failure
 OPENAI_CHAT_MODEL = os.environ.get("OPENAI_CHAT_MODEL", "gpt-4o-mini")  # only used when "openai" is in LLM_PROVIDERS, for replies (separate from TTS_MODEL/STT_MODEL)
 TTS_MODEL = os.environ.get("TTS_MODEL", "tts-1")
 TTS_VOICE = os.environ.get("TTS_VOICE", "alloy")
