@@ -236,6 +236,41 @@ When this repo changes ssh into device then:
    journalctl -u claude-phone -f   # if you want to watch logs
 ```
 
+## Changing the Wi-Fi network
+
+The Pi only knows the network it was flashed with. To move it to a new one
+without a keyboard or monitor, pull the SD card, mount it on the Mac (only the
+`bootfs` partition shows up; macOS can't read the ext4 root), and edit three
+files in `/Volumes/bootfs`:
+
+1. `network-config` — replace the `access-points` block with the new SSID and
+   password. A plain-text password is fine and works better than a hashed PSK
+   on a WPA2/WPA3 mixed-mode router:
+
+   ```yaml
+   access-points:
+     "NEW_SSID":
+       password: "NEW_PASSWORD"
+   ```
+
+2. `meta-data` — change the `instance-id` to any new value.
+3. `cmdline.txt` — change the `i=` value after `ds=nocloud;` to the **same**
+   new value. This is the step that's easy to miss: cloud-init only re-applies
+   `network-config` when the instance ID changes, and the kernel command line
+   overrides `meta-data`, so bumping `meta-data` alone does nothing.
+
+Eject the card, boot the Pi, and wait two to three minutes (the new instance ID
+triggers a full cloud-init first-run). The SSH host key is regenerated on that
+boot, so clear the old one before connecting:
+
+```bash
+ssh-keygen -R brett-pi.local
+ping brett-pi.local
+ssh brett@brett-pi.local
+```
+
+The user password is also reset to the one set in the Imager.
+
 ## Troubleshooting
 
 - **No audio devices found / wrong device picked**: run
