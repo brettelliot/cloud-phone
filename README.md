@@ -172,6 +172,19 @@ python scripts/generate_greeting.py gemini     # or just one
 The app fails fast at startup if the first provider in `LLM_PROVIDERS`
 doesn't have a greeting asset.
 
+## When the Pi is offline
+
+At pickup, and whenever a turn fails, the phone checks that it can reach
+`ONLINE_CHECK_HOST` (default `api.openai.com`). If it can't, it plays
+`assets/offline.pcm` ("I'm offline. Please connect me to a wifi network so I
+can answer your questions.") and waits for the handset to be hung up. That
+clip is pre-recorded because text-to-speech needs the internet too. After
+changing `OFFLINE_MESSAGE` in `cloud_phone/config.py`, regenerate it:
+
+```bash
+python scripts/generate_greeting.py offline
+```
+
 ## Running
 
 ```bash

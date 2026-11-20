@@ -60,6 +60,14 @@ GREETINGS = {
     "openai": "Hi, this is ChatGPT. What's your question?",
 }
 
+# Pre-recorded (assets/offline.pcm) because live TTS needs the internet too.
+# Regenerate with `python scripts/generate_greeting.py offline` after changing it.
+OFFLINE_MESSAGE = "I'm offline. Please connect me to a wifi network so I can answer your questions."
+
+# Checked at pickup and whenever a turn fails: a TCP connect to this host:443.
+ONLINE_CHECK_HOST = os.environ.get("ONLINE_CHECK_HOST", "api.openai.com")
+ONLINE_CHECK_TIMEOUT = float(os.environ.get("ONLINE_CHECK_TIMEOUT", "3"))
+
 SYSTEM_PROMPT = (
     "You are the voice on the other end of a phone call. Keep replies short, "
     "conversational, and natural to hear spoken aloud -- a sentence or two "
